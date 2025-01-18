@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Recebimentos</title>
+    <link rel="icon" href="imagens/poseidon ico.png" type="image/x-icon">
+        <link rel="icon" href="imagens/poseidon ico.png" sizes="16x16" />
+        <link rel="icon" href="imagens/poseidon ico.png" sizes="32x32" type="image/png" />
+        <link rel="icon" href="imagens/poseidon ico.png" sizes="48x48" type="image/png" />
+        <link rel="apple-touch-icon" href="imagens/poseidon ico.png">
+    <style>
+        body {
+            background-image: url(imagens/agua.webp);
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+        }
+
+        .container {
+            width: 80%;
+            margin: auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        form {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        form input {
+            margin: 5px 0;
+            padding: 10px;
+            width: 97%;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        form button {
+            width: 100%;
+            padding: 10px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        form button:hover {
+            background-color: #218838;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        table th {
+            background-color: #007bff;
+            color: #fff;
+        }
+
+        table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        table tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gerenciamento de Recebimentos</h1>
+        <form id="clientForm">
+            <input type="hidden" id="clientId"> <!-- Campo oculto para ID do cliente -->
+            <input type="text" id="name" placeholder="Nome do Cliente" required>
+            <input type="tel" id="phone" placeholder="Telefone do Cliente">
+            <input type="email" id="email" placeholder="Email do Cliente">
+            <input type="number" id="amount" placeholder="Valor a ser Pago (R$)" required>
+            <button type="submit">Salvar</button>
+        </form>
+
+        <input type="text" id="searchBar" placeholder="Buscar cliente por nome ou ID">
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Telefone</th>
+                    <th>Email</th>
+                    <th>Valor a Pagar (R$)</th>
+                    <th>Pagamento</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="clientTable"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const clientTable = document.getElementById("clientTable");
+        const clientForm = document.getElementById("clientForm");
+        const searchBar = document.getElementById("searchBar");
+        let clients = JSON.parse(localStorage.getItem("clients")) || [];
+        let isEditing = false;
+
+        clientForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+
+            const id = isEditing ? parseInt(document.getElementById("clientId").value) : Date.now();
+            const name = document.getElementById("name").value;
+            const phone = document.getElementById("phone").value;
+            const email = document.getElementById("email").value;
+            const amount = parseFloat(document.getElementById("amount").value).toFixed(2);
+
+            if (isEditing) {
+                const clientIndex = clients.findIndex((client) => client.id === id);
+                clients[clientIndex] = { id, name, phone, email, amount, paid: clients[clientIndex].paid };
+                isEditing = false;
+            } else {
+                const newClient = { id, name, phone, email, amount, paid: false };
+                clients.push(newClient);
+            }
+
+            localStorage.setItem("clients", JSON.stringify(clients));
+            clientForm.reset();
+            renderTable();
+        });
+
+        function renderTable() {
+            clientTable.innerHTML = "";
+            clients.forEach((client) => {
+                const row = document.createElement("tr");
+
+                row.innerHTML = `
+                    <td>${client.id}</td>
+                    <td>${client.name}</td>
+                    <td>${client.phone}</td>
+                    <td>${client.email}</td>
+                    <td>R$ ${client.amount}</td>
+                    <td>
+                        <input type="checkbox" ${client.paid ? "checked" : ""} onclick="togglePayment(${client.id})">
+                    </td>
+                    <td>
+                        <button onclick="editClient(${client.id})">Editar</button>
+                        <button onclick="deleteClient(${client.id})">Excluir</button>
+                    </td>
+                `;
+
+                clientTable.appendChild(row);
+            });
+        }
+
+        function togglePayment(id) {
+            const client = clients.find((client) => client.id === id);
+            client.paid = !client.paid;
+            localStorage.setItem("clients", JSON.stringify(clients));
+            renderTable();
+        }
+
+        function deleteClient(id) {
+            clients = clients.filter((client) => client.id !== id);
+            localStorage.setItem("clients", JSON.stringify(clients));
+            renderTable();
+        }
+
+        function editClient(id) {
+            const client = clients.find((client) => client.id === id);
+
+            document.getElementById("clientId").value = client.id;
+            document.getElementById("name").value = client.name;
+            document.getElementById("phone").value = client.phone;
+            document.getElementById("email").value = client.email;
+            document.getElementById("amount").value = client.amount;
+
+            isEditing = true;
+        }
+
+        searchBar.addEventListener("input", (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredClients = clients.filter(
+                (client) =>
+                    client.name.toLowerCase().includes(searchTerm) ||
+                    client.id.toString().includes(searchTerm)
+            );
+            renderFilteredTable(filteredClients);
+        });
+
+        function renderFilteredTable(filteredClients) {
+            clientTable.innerHTML = "";
+            filteredClients.forEach((client) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${client.id}</td>
+                    <td>${client.name}</td>
+                    <td>${client.phone}</td>
+                    <td>${client.email}</td>
+                    <td>R$ ${client.amount}</td>
+                    <td>
+                        <input type="checkbox" ${client.paid ? "checked" : ""} onclick="togglePayment(${client.id})">
+                    </td>
+                    <td>
+                        <button onclick="editClient(${client.id})">Editar</button>
+                        <button onclick="deleteClient(${client.id})">Excluir</button>
+                    </td>
+                `;
+                clientTable.appendChild(row);
+            });
+        }
+
+        renderTable();
+    </script>
+</body>
+</html>
